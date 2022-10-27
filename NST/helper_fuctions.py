@@ -25,8 +25,8 @@ def show_mul(*images,figsize=None):
         iter+=1
     plt.show()
     
-def content_fn(base_img,combination_img):
-    return tf.reduce_sum(tf.square(base_img-combination_img))
+def content_fn(base_img,combination_img,content_weight = 2.5e-8):
+    return content_weight*tf.reduce_sum(tf.square(base_img-combination_img))
 
 def gram_matrix(img):
     img = tf.transpose(img,(2,0,1))
@@ -34,7 +34,7 @@ def gram_matrix(img):
     matrix = tf.matmul(img,img,transpose_b=True)
     return matrix
     
-def style_fn(style_img,combination_img):
+def style_loss(style_img,combination_img):
     style_gram = gram_matrix(style_img)
     combination_gram = gram_matrix(combination_img)
     return tf.reduce_sum(tf.square(style_gram-combination_gram)) / (4*9*(400**4))
@@ -55,3 +55,11 @@ def show(image ,figsize = (10,10),deprocess = True):
         plt.imshow(deprocess_image(image.numpy()))
     else:
         plt.imshow(image.numpy())
+
+def style_fn(style_features,generated_style_features,style_weight = 2e-7):
+    loss = 0
+    for style_feat, combination_feat in zip(style_features,generated_style_features):
+        style_feat = tf.squeeze(style_feat)
+        combination_feat = tf.squeeze(combination_feat)
+        loss+=style_weight*style_loss(style_feat,combination_feat)
+    return loss
