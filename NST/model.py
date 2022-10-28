@@ -1,6 +1,7 @@
 import tensorflow as tf
 from helper_fuctions import *
 from tqdm import tqdm
+import os
 class VGG(tf.keras.Model):
     def __init__(self):
         vgg = tf.keras.applications.vgg19.VGG19(weights='imagenet',include_top=False)
@@ -24,10 +25,23 @@ class VGG(tf.keras.Model):
                     features = x
         return features
 
-    def transform(self,content_image,style_image,optimizer = tf.keras.optimizers.Adam(learning_rate=10),epochs = 400,print_per_epoch = 100,content_weight = 2.5e-8,style_weight = 2e-7):
+    def transform(self,
+    content_image,
+    style_image,
+    optimizer = tf.keras.optimizers.Adam(),
+    epochs = 400,
+    content_weight = 2.5e-8,
+    style_weight = 1e-6/5,
+    decay_rate = 0.96,
+    decay_step = 100,
+    save_best_pic = False,
+    save_best_path = None,
+    experiment_name = None):
         combination_img = tf.Variable(content_image)
         pbar = tqdm(range(1,epochs+1),desc = "NST",unit = " epochs",ncols=150)
+        best_loss = 100000
         for epoch in pbar:
+            optimizer.learning_rate = 10*(tf.pow(decay_rate,(epoch/decay_step)))
             with tf.GradientTape() as tape:
                 tape.watch(combination_img)
                 self.choose = 'style'
@@ -41,6 +55,21 @@ class VGG(tf.keras.Model):
                 # Style loss...
                 style_loss = style_fn(style_features,generated_style_features,style_weight)
                 total_loss = style_loss + content_loss
+            
+            if(save_best_pic):
+                if(total_loss < best_loss):
+                    best_loss = total_loss
+                    try:
+                        os.remove(save_best_path + experiment_name + ".jpg")
+                    except:
+                        pass
+                    tf.keras.utils.save_img(
+                        path = save_best_path + experiment_name + ".jpg",
+                        x = deprocess_image(combination_img.numpy()),
+                        data_format = "channels_last",
+                    )
+
+
             pbar.set_postfix_str(f"content loss: {content_loss:.4f} | style loss: {style_loss:.4f} | total loss: {total_loss:.4f}")
             grads = tape.gradient(total_loss,[combination_img])
             optimizer.apply_gradients(zip(grads,[combination_img]))

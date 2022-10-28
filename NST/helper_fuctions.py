@@ -56,7 +56,7 @@ def show(image ,figsize = (10,10),deprocess = True):
     else:
         plt.imshow(image.numpy())
 
-def style_fn(style_features,generated_style_features,style_weight = 2e-7):
+def style_fn(style_features,generated_style_features,style_weight = 1e-6/5):
     loss = 0
     for style_feat, combination_feat in zip(style_features,generated_style_features):
         style_feat = tf.squeeze(style_feat)
